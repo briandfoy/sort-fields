@@ -13,14 +13,23 @@ require 5.003_03;
 @EXPORT = qw(
 	make_fieldsort
 	fieldsort
+	make_stable_fieldsort
+	stable_fieldsort
 );
-$VERSION = '0.04';
+$VERSION = '0.90';
 
 use Carp;
 
 sub make_fieldsort {
-	my $selfname = (caller 1)[3] eq 'Sort::Fields::fieldsort' ?
-		'fieldsort' : 'make_fieldsort';
+	my $selfname;
+	if ((caller)[0] eq 'Sort::Fields') {
+		($selfname) = (caller 1)[3] =~ /([^:]*)$/;
+	} else {
+		$selfname = 'make_fieldsort'
+	};
+	unless (@_) {
+		croak "$selfname requires argument(s)";
+	}
 
 	my ($sep, $cols);
 	if (ref $_[0]) {
@@ -29,11 +38,19 @@ sub make_fieldsort {
 		$sep = shift;
 	}
 	unless (ref($cols = shift) eq 'ARRAY') {
-		croak "$selfname columns must be in anon array";
+		croak "$selfname field specifiers must be in anon array";
 	}
 	my (@sortcode, @col);
 	my $level = 1;
 	my $maxcol = -1;
+	my $stable = 0;
+	if (@$cols and $$cols[0] eq '-') {
+		shift @$cols;
+		$stable = 1;
+	}
+	unless (@$cols) {
+		croak "$selfname must have at least one field specifier";
+	}
 	for (@$cols) {
 		unless (/^-?\d+n?$/) {
 			croak "improperly formatted $selfname column specifier '$_'";
@@ -47,7 +64,13 @@ sub make_fieldsort {
 		} 
 		push @col, (/(\d+)/)[0] - 1;
 		$maxcol = $col[-1] if $maxcol < $col[-1];
-		push @sortcode, "\$${a}->[$level] $op \$${b}->[$level]";
+		if ($stable) {
+			# indices are offset by 1 in this case
+			my $levp1 = $level + 1;
+			push @sortcode, "\$${a}->[$levp1] $op \$${b}->[$levp1]";
+		} else {
+			push @sortcode, "\$${a}->[$level] $op \$${b}->[$level]";
+		}
 		$level++;
 	}
 	# have to check this all by itself, since if there's a regex
@@ -56,34 +79,83 @@ sub make_fieldsort {
 	if ($@) {
 		croak "probable regexp error in $selfname arg: /$sep/\n$@";
 	}
-	my $splitfunc = eval 'sub { (split /$sep/o, $_, $maxcol + 2)[@col] } ';
+	my $splitfunc;
+	$splitfunc = eval 'sub { (split /$sep/o, $_, $maxcol + 2)[@col] } ';
 	if ($@) {
 		die "eval failed in $selfname (internal error?)\n$@";
 	}
 	my $sortcode = join " or ", @sortcode;
-	my $sub = eval qq{
-		sub {
-			if (\$^W and not wantarray) {
-				carp "fieldsort called in scalar or void context";
+	my $sub;
+	if ($stable) {
+		my $i;  # the $i for the stable sort closure
+		$sub = eval qq{
+			sub {
+				if (\$^W and not wantarray) {
+					carp "fieldsort called in scalar or void context";
+				}
+				\$i = 0;  # reset counter in case reusing this closure
+				map \$_->[0],
+					sort { $sortcode or \$a->[1] <=> \$b->[1] }
+					map [\$_, \$i++, \$splitfunc->(\$_)],
+					\@_;
 			}
-			map \$_->[0],
-				sort { $sortcode }
-				map [\$_, \$splitfunc->(\$_)],
-				\@_;
 		}
-	};
+	} else {
+		$sub = eval qq{
+			sub {
+				if (\$^W and not wantarray) {
+					carp "fieldsort called in scalar or void context";
+				}
+				map \$_->[0],
+					sort { $sortcode }
+					map [\$_, \$splitfunc->(\$_)],
+					\@_;
+			}
+		}
+	}
 	if ($@) {
 		die "eval failed in $selfname (internal error?)\n$@";
 	}
 	$sub;
 }
 
+sub make_stable_fieldsort {
+	unless (@_) {
+		croak "make_stable_fieldsort requires argument(s)";
+	}
+	if (ref $_[0] eq 'ARRAY') {
+		unshift @{$_[0]}, '-';
+	} elsif (@_ > 1 and ref $_[1] eq 'ARRAY') {
+		unshift @{$_[1]}, '-';
+	}
+	make_fieldsort @_;
+}
+
 sub fieldsort {
+	unless (@_) {
+		croak "fieldsort requires argument(s)";
+	}
 	my ($sep, $cols);
 	if (ref $_[0]) {
 		$sep = '\\s+'
 	} else {
 		$sep = shift;
+	}
+	$cols = shift;
+	make_fieldsort($sep, $cols)->(@_);
+}
+
+sub stable_fieldsort {
+	unless (@_) {	
+		croak "stable_fieldsort requires argument(s)";
+	}
+	my ($sep, $cols);
+	if (ref $_[0] eq 'ARRAY') {
+		$sep = '\\s+';
+		unshift @{$_[0]}, '-';
+	} elsif (@_ > 1 and ref $_[1] eq 'ARRAY') {
+		$sep = shift;
+		unshift @{$_[1]}, '-';
 	}
 	$cols = shift;
 	make_fieldsort($sep, $cols)->(@_);
@@ -114,7 +186,8 @@ Sort::Fields provides a general purpose technique for efficiently sorting
 lists of lines that contain data separated into fields.
 
 Sort::Fields automatically imports two subroutines, C<fieldsort> and
-C<make_fieldsort>.  C<make_fieldsort> generates a sorting subroutine
+C<make_fieldsort>, and two variants, C<stable_fieldsort> and 
+C<make_stable_fieldsort>.  C<make_fieldsort> generates a sorting subroutine
 and returns a reference to it.  C<fieldsort> is a wrapper for
 the C<make_fieldsort> subroutine.
 
@@ -136,11 +209,15 @@ The order in which the specifiers appear is the order in which they
 will be used to sort the data.  The primary key is first, the secondary
 key is second, and so on.
 
-C<fieldsort [1, 2] @data> is roughly equivalent to
-C<make_fieldsort([1, 2])->(@data)>.  Avoid calling fieldsort repeatedly
+C<fieldsort [1, 2], @data> is roughly equivalent to
+C<make_fieldsort([1, 2])-E<gt>(@data)>.  Avoid calling fieldsort repeatedly
 with the same sort specifiers.  If you need to use a particular
 sort more than once, it is more efficient to call C<make_fieldsort>
 once and reuse the subroutine it returns.
+
+C<stable_fieldsort> and C<make_stable_fieldsort> are like their
+"unstable" counterparts, except that the items that compare the same
+are maintained in their original order.
 
 =head1 EXAMPLES
 
@@ -243,6 +320,18 @@ Some sample data (in array C<@data>):
   51    erwt  34.2   ewet
   91    fdgs  3.43   ewet
 
+  # stable alpha sort on column 4 (maintains original relative order
+  # among items that compare the same)
+  print stable_fieldsort [4], @data;
+
+  123   asd   1.22   asdd
+  32    ewq   2.32   asdd
+  123   refs  3.22   asdd
+  123   refs  4.32   asdd
+  43    rewq  2.12   ewet
+  51    erwt  34.2   ewet
+  23    erww  4.21   ewet
+  91    fdgs  3.43   ewet
 
 =head1 BUGS
 

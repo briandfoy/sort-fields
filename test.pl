@@ -35,68 +35,148 @@ sub test {
 	$n++;
 }
 
+sub test_msg {
+	my ($warn, $die) = ('', '');
+	local $SIG{__WARN__} = sub { $warn = shift };
+	local $SIG{__DIE__} = sub { $die = shift };
+	my $code = shift;
+	eval $code;
+	$warn =~ s/ at (?!.*\bat\b)[\w\W]*$//;
+	$die =~ s/ at (?!.*\bat\b)[\w\W]*$//;
+	if ($warn eq $_[0] and $die eq $_[1]) {
+		print "ok $n\n";
+	} else {
+		print "not ok $n\n";
+		print "code: $code";
+		print " warn: $warn\n" if $warn;
+		print " die: $die\n" if $die;
+	}
+	$n++;
+}
+
 @data = <DATA>;
 
+# test warnings, errors
+
+for (qw(fieldsort stable_fieldsort make_fieldsort make_stable_fieldsort)) {
+	test_msg qq{
+		$_();
+	}, "", "$_ requires argument(s)";
+	test_msg qq{
+		$_(1);
+	}, "", "$_ field specifiers must be in anon array";
+	test_msg qq{
+		$_([]);
+	}, "", "$_ must have at least one field specifier";
+	test_msg qq{
+		$_(['x']);
+	}, "", "improperly formatted $_ column specifier 'x'";
+	test_msg qq{
+		$_(q/(/, ['1n']);
+	}, "", "probable regexp error in $_ arg: /(/
+/(/: unmatched () in regexp";
+}
+for (qw(fieldsort stable_fieldsort)) {
+	test_msg qq{
+		scalar $_([1], qw(a b c));
+	}, "fieldsort called in scalar or void context", "";
+}	
+
+
+# ascending numeric
 test(
 	[fieldsort(['1n'], @data)],
 	[map {$_->[0]} sort {$a->[1]<=>$b->[1]} map {[$_, split /\s+/]} @data]
 );
 
+# ascending alpha
 test(
 	[fieldsort([2], @data)],
 	[map {$_->[0]} sort {$a->[2]cmp$b->[2]} map {[$_, split /\s+/]} @data]
 );
 
+# ascending numeric
 test(
 	[fieldsort(['3n'], @data)],
 	[map {$_->[0]} sort {$a->[3]<=>$b->[3]} map {[$_, split /\s+/]} @data]
 );
 
+# ascending numeric
 test(
 	[fieldsort(['4n'], @data)],
 	[map {$_->[0]} sort {$a->[4]<=>$b->[4]} map {[$_, split /\s+/]} @data]
 );
 
+# descending numeric
 test(
 	[fieldsort(['-1n'], @data)],
 	[map {$_->[0]} sort {$b->[1]<=>$a->[1]} map {[$_, split /\s+/]} @data]
 );
 
+# descending alpha
 test(
 	[fieldsort([-2], @data)],
 	[map {$_->[0]} sort {$b->[2]cmp$a->[2]} map {[$_, split /\s+/]} @data]
 );
 
+# descending numeric
 test(
 	[fieldsort(['-3n'], @data)],
 	[map {$_->[0]} sort {$b->[3]<=>$a->[3]} map {[$_, split /\s+/]} @data]
 );
 
+# descending numeric
 test(
 	[fieldsort(['-4n'], @data)],
 	[map {$_->[0]} sort {$b->[4]<=>$a->[4]} map {[$_, split /\s+/]} @data]
 );
 
+# ascending alpha, then ascending numeric
 test(
 	[fieldsort([1, '4n'], @data)],
 	[map {$_->[0]} sort {$a->[1]cmp$b->[1] or $a->[4]<=>$b->[4]} map {[$_, split /\s+/]} @data]
 );
 
+# ascending alpha, then descending numeric
 test(
 	[fieldsort([1, '-4n'], @data)],
 	[map {$_->[0]} sort {$a->[1]cmp$b->[1] or $b->[4]<=>$a->[4]} map {[$_, split /\s+/]} @data]
 );
 
+# ascending alpha, then ascending alpha
 test(
 	[fieldsort([2, 0], @data)],
 	[map {$_->[0]} sort {$a->[2]cmp$b->[2] or $a->[0]cmp$b->[0]} map {[$_, split /\s+/]} @data]
 );
 
+# ascending alpha, then descending numeric
 test(
 	[fieldsort([2, '-0'], @data)],
 	[map {$_->[0]} sort {$a->[2]cmp$b->[2] or $b->[0]cmp$a->[0]} map {[$_, split /\s+/]} @data]
 );
 
+# stable, ascending numeric
+my $i = 0;
+test(
+	[fieldsort(['-', '1n'], @data)],
+	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data]
+);
+
+# stable, ascending numeric
+$i = 0;
+test(
+	[stable_fieldsort(['1n'], @data)],
+	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data]
+);
+
+# stable, ascending numeric, then descending alphabetic
+$i = 0;
+test(
+	[stable_fieldsort(['1n', -2], @data)],
+	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $b->[3]cmp$a->[3] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data]
+);
+
+$i = 0;
 
 __END__
 0 a 1  -4.5
