@@ -4,20 +4,24 @@ use strict;
 use vars qw($VERSION @ISA @EXPORT);
 
 require Exporter;
-require AutoLoader;
+require 5.003_03;
 
-@ISA = qw(Exporter AutoLoader);
+@ISA = qw(Exporter);
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw(
+	make_fieldsort
 	fieldsort
 );
-$VERSION = '0.01';
+$VERSION = '0.04';
 
 use Carp;
 
-sub fieldsort {
+sub make_fieldsort {
+	my $selfname = (caller 1)[3] eq 'Sort::Fields::fieldsort' ?
+		'fieldsort' : 'make_fieldsort';
+
 	my ($sep, $cols);
 	if (ref $_[0]) {
 		$sep = '\\s+'
@@ -25,15 +29,18 @@ sub fieldsort {
 		$sep = shift;
 	}
 	unless (ref($cols = shift) eq 'ARRAY') {
-		croak "fieldsort columns must be in anon array";
+		croak "$selfname columns must be in anon array";
 	}
 	my (@sortcode, @col);
 	my $level = 1;
 	my $maxcol = -1;
 	for (@$cols) {
+		unless (/^-?\d+n?$/) {
+			croak "improperly formatted $selfname column specifier '$_'";
+		}
 		my ($a, $b) = /^-/ ? qw(b a) : qw(a b);
 		my $op = /n$/ ? '<=>' : 'cmp';
-		my ($col) = /(\d+)/;
+		my ($col) = /^-?(\d+)/;
 		if ($col == 0) {  # column 0 gives the entire string
 			push @sortcode, "\$${a}->[0] $op \$${b}->[0]";
 			next;
@@ -43,26 +50,50 @@ sub fieldsort {
 		push @sortcode, "\$${a}->[$level] $op \$${b}->[$level]";
 		$level++;
 	}
-	my $sortfunc = eval "sub { " . join (" or ", @sortcode) . " } ";
+	# have to check this all by itself, since if there's a regex
+    # error it won't show up until the sub is called (urk!)
+	eval '"" =~ /$sep/';
 	if ($@) {
-		die "eval failed in fieldsort (internal error?)";
+		croak "probable regexp error in $selfname arg: /$sep/\n$@";
 	}
 	my $splitfunc = eval 'sub { (split /$sep/o, $_, $maxcol + 2)[@col] } ';
 	if ($@) {
-		croak "probable regexp error in fieldsort arg: /$sep/o";
+		die "eval failed in $selfname (internal error?)\n$@";
 	}
-	return
-		map $_->[0],
-		sort { $sortfunc->() }
-		map [$_, $splitfunc->($_)],
-		@_;
+	my $sortcode = join " or ", @sortcode;
+	my $sub = eval qq{
+		sub {
+			if (\$^W and not wantarray) {
+				carp "fieldsort called in scalar or void context";
+			}
+			map \$_->[0],
+				sort { $sortcode }
+				map [\$_, \$splitfunc->(\$_)],
+				\@_;
+		}
+	};
+	if ($@) {
+		die "eval failed in $selfname (internal error?)\n$@";
+	}
+	$sub;
 }
+
+sub fieldsort {
+	my ($sep, $cols);
+	if (ref $_[0]) {
+		$sep = '\\s+'
+	} else {
+		$sep = shift;
+	}
+	$cols = shift;
+	make_fieldsort($sep, $cols)->(@_);
+}
+
 
 # Autoload methods go after =cut, and are processed by the autosplit program.
 
 1;
 __END__
-# Below is the stub of documentation for your module. You better edit it!
 
 =head1 NAME
 
@@ -74,16 +105,22 @@ Sort::Fields - Sort lines containing delimited fields
   @sorted = fieldsort [3, '2n'], @lines;
   @sorted = fieldsort '\+', [-1, -3, 0], @lines;
 
+  $sort_3_2n = make_fieldsort [3, '2n'], @lines;
+  @sorted = $sort_3_2n->(@lines);
+
 =head1 DESCRIPTION
 
 Sort::Fields provides a general purpose technique for efficiently sorting
 lists of lines that contain data separated into fields.
 
-Sort::Fields automatically imports a single subroutine, fieldsort.
+Sort::Fields automatically imports two subroutines, C<fieldsort> and
+C<make_fieldsort>.  C<make_fieldsort> generates a sorting subroutine
+and returns a reference to it.  C<fieldsort> is a wrapper for
+the C<make_fieldsort> subroutine.
 
-The first argument to fieldsort is a delimiter string, which is
+The first argument to make_fieldsort is a delimiter string, which is
 used as a regular expression argument for a C<split> operator.  The
-delimiter string is optional.  If it is not supplied, fieldsort
+delimiter string is optional.  If it is not supplied, make_fieldsort
 splits each line using C</\s+/>.
 
 The second argument is an array reference containing one or more 
@@ -99,7 +136,11 @@ The order in which the specifiers appear is the order in which they
 will be used to sort the data.  The primary key is first, the secondary
 key is second, and so on.
 
-The remaining arguments are the data to be sorted.
+C<fieldsort [1, 2] @data> is roughly equivalent to
+C<make_fieldsort([1, 2])->(@data)>.  Avoid calling fieldsort repeatedly
+with the same sort specifiers.  If you need to use a particular
+sort more than once, it is more efficient to call C<make_fieldsort>
+once and reuse the subroutine it returns.
 
 =head1 EXAMPLES
 
@@ -178,7 +219,7 @@ Some sample data (in array C<@data>):
   # now, splitting on either literal period or whitespace
   # sort numeric on column 4 (fractional part of decimals) then
   # numeric on column 3 (whole part of decimals)
-  print fieldsort '(?:\.|s+)', ['4n', '3n'], @data;
+  print fieldsort '(?:\.|\s+)', ['4n', '3n'], @data;
 
   51    erwt  34.2   ewet
   43    rewq  2.12   ewet
@@ -205,7 +246,7 @@ Some sample data (in array C<@data>):
 
 =head1 BUGS
 
-"TRIAL BALLOON VERSION" -- no tests!
+Some rudimentary tests now.
 
 Perhaps something should be done to catch things like:
 
@@ -223,6 +264,10 @@ contents of the parentheses as well as the stuff between the delimiters.
 I could imagine how this could be useful, but on the other hand I
 could also imagine how it could be confusing if encountered unexpectedly.
 Caveat sortor.
+
+Not really a bug, but if you are planning to sort a large text file,
+consider using sort(1).  Unless, of course, your operating system
+doesn't have sort(1).
 
 =head1 AUTHOR
 
