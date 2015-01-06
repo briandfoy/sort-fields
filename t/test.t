@@ -1,182 +1,158 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl test.pl'
+use utf8;
+use strict;
+use warnings;
 
-######################### We start with some black magic to print on failure.
+use Test::More 0.94;
 
-# Change 1..1 below to 1..last_test_to_print .
-# (It may become useful if the test is moved to ./t subdirectory.)
-
-BEGIN { $| = 1; print "1..1\n"; }
-END {print "not ok 1\n" unless $loaded;}
-use Sort::Fields;
-$loaded = 1;
-print "ok 1\n";
-
-######################### End of black magic.
-
-# Insert your test code below (better if it prints "ok 13"
-# (correspondingly "not ok 13") depending on the success of chunk 13
-# of the test code):
-
-$^W = 1;
-
-my $n = 2;
-
-sub array_compare {
-	my($a1, $a2) = @_;
-	return 0 unless $#$a1 == $#$a2;
-	for (my $i = 0; $i <= $#$a1; $i++) {
-		return 0 unless $$a1[$i] eq $$a2[$i];
-	}
-	1;
-}
-sub test {
-	print array_compare(@_) ?  "ok $n\n" : "not ok $n\n";
-	$n++;
-}
+BEGIN { use_ok( 'Sort::Fields' ) }
 
 sub test_msg {
+	my( $code, $warn_expected, $die_expected ) = @_;
+
 	my ($warn, $die) = ('', '');
 	local $SIG{__WARN__} = sub { $warn = shift };
 	local $SIG{__DIE__} = sub { $die = shift };
-	my $code = shift;
 	eval $code;
 	$warn =~ s/ at (?!.*\bat\b)[\w\W]*$//;
 	$die =~ s/ at (?!.*\bat\b)[\w\W]*$//;
-	if ($warn eq $_[0] and $die eq $_[1]) {
-		print "ok $n\n";
-	} else {
-		print "not ok $n\n";
-		print "code: $code";
-		print " warn: $warn\n" if $warn;
-		print " die: $die\n" if $die;
+	
+	subtest $code => sub {
+		is( $warn, $warn_expected, "warn message is correct" ) or diag(
+			"code: $code\nwarn: $warn\n" );
+		is( $die,  $die_expected, "die message is correct" ) or diag(
+			"code: $code\nwarn: $die\n" );
+		};
 	}
-	$n++;
-}
 
-@data = <DATA>;
+my @data = <DATA>;
 
+####################################################################
 # test warnings, errors
 
-for (qw(fieldsort stable_fieldsort make_fieldsort make_stable_fieldsort)) {
-	test_msg qq{
-		$_();
-	}, "", "$_ requires argument(s)";
-	test_msg qq{
-		$_(1);
-	}, "", "$_ field specifiers must be in anon array";
-	test_msg qq{
-		$_([]);
-	}, "", "$_ must have at least one field specifier";
-	test_msg qq{
-		$_(['x']);
-	}, "", "improperly formatted $_ column specifier 'x'";
-	test_msg qq{
-		$_(q/(/, ['1n']);
-	}, "", "probable regexp error in $_ arg: /(/
-/(/: unmatched () in regexp";
-}
-for (qw(fieldsort stable_fieldsort)) {
-	test_msg qq{
-		scalar $_([1], qw(a b c));
-	}, "fieldsort called in scalar or void context", "";
-}	
+my $regex_warning = do {
+	eval "m/(/";
+	my $die = $@;
+	$die =~ s/ at (?!.*\bat\b)[\w\W]*$//;
+	$die;
+	};
 
+diag( "regex warning is $regex_warning" );
 
-# ascending numeric
-test(
+foreach ( qw(fieldsort stable_fieldsort make_fieldsort make_stable_fieldsort) ) {
+	test_msg qq{ $_();             }, "", "$_ requires argument(s)";
+	test_msg qq{ $_(1);            }, "", "$_ field specifiers must be in anon array";
+	test_msg qq{ $_([]);           }, "", "$_ must have at least one field specifier";
+	test_msg qq{ $_(['x']);        }, "", "improperly formatted $_ column specifier 'x'";
+	test_msg qq{ $_(q/(/, ['1n']); }, "", "probable regexp error in $_ arg: /(/\n$regex_warning";
+	}
+
+foreach ( qw(fieldsort stable_fieldsort) ) {
+	test_msg qq{ scalar $_([1], qw(a b c)); }, "fieldsort called in scalar or void context", "";
+	}	
+
+####################################################################
+# test that it all works
+
+is_deeply(
 	[fieldsort(['1n'], @data)],
-	[map {$_->[0]} sort {$a->[1]<=>$b->[1]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[1]<=>$b->[1]} map {[$_, split /\s+/]} @data],
+	"ascending numeric"
+	);
 
-# ascending alpha
-test(
+is_deeply(
 	[fieldsort([2], @data)],
-	[map {$_->[0]} sort {$a->[2]cmp$b->[2]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[2]cmp$b->[2]} map {[$_, split /\s+/]} @data],
+	"ascending alpha"
+	);
 
-# ascending numeric
-test(
+is_deeply(
 	[fieldsort(['3n'], @data)],
-	[map {$_->[0]} sort {$a->[3]<=>$b->[3]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[3]<=>$b->[3]} map {[$_, split /\s+/]} @data],
+	"ascending numeric"
+	);
 
-# ascending numeric
-test(
+is_deeply(
 	[fieldsort(['4n'], @data)],
-	[map {$_->[0]} sort {$a->[4]<=>$b->[4]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[4]<=>$b->[4]} map {[$_, split /\s+/]} @data],
+	"ascending numeric"
+	);
 
-# descending numeric
-test(
+is_deeply(
 	[fieldsort(['-1n'], @data)],
-	[map {$_->[0]} sort {$b->[1]<=>$a->[1]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$b->[1]<=>$a->[1]} map {[$_, split /\s+/]} @data],
+	"descending numeric"
+	);
 
-# descending alpha
-test(
+is_deeply(
 	[fieldsort([-2], @data)],
-	[map {$_->[0]} sort {$b->[2]cmp$a->[2]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$b->[2]cmp$a->[2]} map {[$_, split /\s+/]} @data],
+	"descending alpha"
+	);
 
-# descending numeric
-test(
+is_deeply(
 	[fieldsort(['-3n'], @data)],
-	[map {$_->[0]} sort {$b->[3]<=>$a->[3]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$b->[3]<=>$a->[3]} map {[$_, split /\s+/]} @data],
+	"descending numeric"
+	);
 
-# descending numeric
-test(
+is_deeply(
 	[fieldsort(['-4n'], @data)],
-	[map {$_->[0]} sort {$b->[4]<=>$a->[4]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$b->[4]<=>$a->[4]} map {[$_, split /\s+/]} @data],
+	"descending numeric"
+	);
 
-# ascending alpha, then ascending numeric
-test(
+is_deeply(
 	[fieldsort([1, '4n'], @data)],
-	[map {$_->[0]} sort {$a->[1]cmp$b->[1] or $a->[4]<=>$b->[4]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[1]cmp$b->[1] or $a->[4]<=>$b->[4]} map {[$_, split /\s+/]} @data],
+	"ascending alpha, then ascending numeric"
+	);
 
-# ascending alpha, then descending numeric
-test(
+is_deeply(
 	[fieldsort([1, '-4n'], @data)],
-	[map {$_->[0]} sort {$a->[1]cmp$b->[1] or $b->[4]<=>$a->[4]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[1]cmp$b->[1] or $b->[4]<=>$a->[4]} map {[$_, split /\s+/]} @data],
+	"ascending alpha, then descending numeric"
+	);
 
-# ascending alpha, then ascending alpha
-test(
+is_deeply(
 	[fieldsort([2, 0], @data)],
-	[map {$_->[0]} sort {$a->[2]cmp$b->[2] or $a->[0]cmp$b->[0]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[2]cmp$b->[2] or $a->[0]cmp$b->[0]} map {[$_, split /\s+/]} @data],
+	"ascending alpha, then ascending alpha"
+	);
 
-# ascending alpha, then descending numeric
-test(
+is_deeply(
 	[fieldsort([2, '-0'], @data)],
-	[map {$_->[0]} sort {$a->[2]cmp$b->[2] or $b->[0]cmp$a->[0]} map {[$_, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[2]cmp$b->[2] or $b->[0]cmp$a->[0]} map {[$_, split /\s+/]} @data],
+	"ascending alpha, then descending numeric"
+	);
 
-# stable, ascending numeric
+{
 my $i = 0;
-test(
+is_deeply(
 	[fieldsort(['-', '1n'], @data)],
-	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data],
+	"stable, ascending numeric"
+	);
+}
 
-# stable, ascending numeric
-$i = 0;
-test(
+{
+my $i = 0;
+is_deeply(
 	[stable_fieldsort(['1n'], @data)],
-	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data],
+	"stable, ascending numeric"
+	);
+}
 
-# stable, ascending numeric, then descending alphabetic
-$i = 0;
-test(
+{
+my $i = 0;
+is_deeply(
 	[stable_fieldsort(['1n', -2], @data)],
-	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $b->[3]cmp$a->[3] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data]
-);
+	[map {$_->[0]} sort {$a->[2]<=>$b->[2] or $b->[3]cmp$a->[3] or $a->[1]<=>$b->[1]} map {[$_, $i++, split /\s+/]} @data],
+	"stable, ascending numeric, then descending alphabetic"
+	);
+}
 
-$i = 0;
+done_testing();
 
 __END__
 0 a 1  -4.5
