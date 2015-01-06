@@ -6,6 +6,10 @@ use Test::More 0.94;
 
 BEGIN { use_ok( 'Sort::Fields' ) }
 
+
+####################################################################
+# test warnings, errors
+
 sub test_msg {
 	my( $code, $warn_expected, $die_expected ) = @_;
 
@@ -24,11 +28,8 @@ sub test_msg {
 		};
 	}
 
-my @data = <DATA>;
-
-####################################################################
-# test warnings, errors
-
+# warnings change from version to version, so let this perl
+# tell you what it is now.
 my $regex_warning = do {
 	eval "m/(/";
 	my $die = $@;
@@ -36,7 +37,7 @@ my $regex_warning = do {
 	$die;
 	};
 
-diag( "regex warning is $regex_warning" );
+#diag( "regex warning is $regex_warning" );
 
 foreach ( qw(fieldsort stable_fieldsort make_fieldsort make_stable_fieldsort) ) {
 	test_msg qq{ $_();             }, "", "$_ requires argument(s)";
@@ -52,6 +53,8 @@ foreach ( qw(fieldsort stable_fieldsort) ) {
 
 ####################################################################
 # test that it all works
+
+my @data = <DATA>;
 
 is_deeply(
 	[fieldsort(['1n'], @data)],
