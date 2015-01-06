@@ -161,8 +161,6 @@ sub stable_fieldsort {
 }
 
 
-# Autoload methods go after =cut, and are processed by the autosplit program.
-
 1;
 __END__
 
