@@ -12,7 +12,7 @@ my $github    = 'https://github.com/briandfoy/sort-fields';
 my $main_file = catfile( qw( lib Sort Fields.pm ) );
 
 my %WriteMakefile = (
-	'NAME'	        => 'ReturnValue',
+	'NAME'	        => 'Sort::Fields',
 	'ABSTRACT_FROM' => $main_file,
 	'VERSION_FROM'  => $main_file,
 	'LICENSE'       => 'perl',
@@ -47,7 +47,7 @@ my %WriteMakefile = (
 			},
 		},
 
-	clean  => { FILES => q|ReturnValue-*| },
+	clean  => { FILES => q|Sort-*| },
 	);
 
 sub arguments { \%WriteMakefile }
