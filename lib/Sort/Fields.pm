@@ -359,7 +359,7 @@ doesn't have sort(1).
 
 =head1 AUTHOR
 
-Joseph N. Hall, joseph@5sigma.com
+Joseph N. Hall, C<< <joseph@5sigma.com> >>
 
 =head1 SEE ALSO
 
