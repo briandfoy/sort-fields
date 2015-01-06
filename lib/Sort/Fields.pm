@@ -15,7 +15,7 @@ require 5.003_03;
 	make_stable_fieldsort
 	stable_fieldsort
 );
-$VERSION = '0.90';
+$VERSION = '1.001';
 
 use Carp;
 
