@@ -1,12 +1,11 @@
 package Sort::Fields;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT);
+use vars qw($VERSION @EXPORT);
 
-require Exporter;
+use Exporter qw(import);
 require 5.003_03;
-
-@ISA = qw(Exporter);
+;
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
