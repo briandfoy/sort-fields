@@ -1,6 +1,8 @@
 Changes
-Fields.pm
-MANIFEST
+lib/Sort/Fields.pm
 Makefile.PL
-test.pl
+MANIFEST
+MANIFEST.SKIP
 README
+t/test.t
+xt/changes.t
