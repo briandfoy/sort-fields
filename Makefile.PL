@@ -1,10 +1,12 @@
 use 5.008;
+
+package Sort::Fields;
 use strict;
 use warnings;
 
 use File::Spec::Functions qw(catfile);
 
-my $module    = 'Sort::Fields';
+my $module    = __PACKAGE__;
 ( my $dist = $module ) =~ s/::/-/g;
 
 my $github    = 'https://github.com/briandfoy/sort-fields';
