@@ -5,6 +5,8 @@ use warnings;
 use File::Spec::Functions qw(catfile);
 
 my $module    = 'Sort::Fields';
+( my $dist = $module ) =~ s/::/-/g;
+
 my $github    = 'https://github.com/briandfoy/sort-fields';
 my $main_file = catfile( 'lib', split /::/, "$module.pm" );
 
