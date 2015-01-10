@@ -47,7 +47,7 @@ my %WriteMakefile = (
 			},
 		},
 
-	clean  => { FILES => q|Sort-*| },
+	clean  => { FILES => "$dist-*" },
 	);
 
 sub arguments { \%WriteMakefile }
