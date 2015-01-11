@@ -1,8 +1,0 @@
-Changes
-lib/Sort/Fields.pm
-Makefile.PL
-MANIFEST
-MANIFEST.SKIP
-README
-t/test.t
-xt/changes.t
