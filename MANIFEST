@@ -1,0 +1,10 @@
+Changes
+lib/Sort/Fields.pm
+LICENSE
+Makefile.PL
+MANIFEST			This list of files
+MANIFEST.SKIP
+README.pod
+t/test.t
+t/test_manifest
+xt/changes.t
