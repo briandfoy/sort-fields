@@ -60,7 +60,7 @@ sub make_fieldsort {
 		if ($col == 0) {  # column 0 gives the entire string
 			push @sortcode, "\$${a}->[0] $op \$${b}->[0]";
 			next;
-		} 
+		}
 		push @col, (/(\d+)/)[0] - 1;
 		$maxcol = $col[-1] if $maxcol < $col[-1];
 		if ($stable) {
@@ -145,7 +145,7 @@ sub fieldsort {
 }
 
 sub stable_fieldsort {
-	unless (@_) {	
+	unless (@_) {
 		croak "stable_fieldsort requires argument(s)";
 	}
 	my ($sep, $cols);
@@ -163,6 +163,8 @@ sub stable_fieldsort {
 
 1;
 __END__
+
+=encoding utf8
 
 =head1 NAME
 
@@ -183,7 +185,7 @@ Sort::Fields provides a general purpose technique for efficiently sorting
 lists of lines that contain data separated into fields.
 
 Sort::Fields automatically imports two subroutines, C<fieldsort> and
-C<make_fieldsort>, and two variants, C<stable_fieldsort> and 
+C<make_fieldsort>, and two variants, C<stable_fieldsort> and
 C<make_stable_fieldsort>.  C<make_fieldsort> generates a sorting subroutine
 and returns a reference to it.  C<fieldsort> is a wrapper for
 the C<make_fieldsort> subroutine.
@@ -193,7 +195,7 @@ used as a regular expression argument for a C<split> operator.  The
 delimiter string is optional.  If it is not supplied, make_fieldsort
 splits each line using C</\s+/>.
 
-The second argument is an array reference containing one or more 
+The second argument is an array reference containing one or more
 field specifiers.  The specifiers indicate what fields in the strings
 will be used to sort the data.  The specifier "1" indicates the first
 field, "2" indicates the second, and so on.  A negative specifier
