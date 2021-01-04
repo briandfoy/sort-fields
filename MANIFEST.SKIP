@@ -61,3 +61,4 @@
 \.?appveyor.yml
 \.releaserc
 \.lwpcookies
+\.github
