@@ -19,7 +19,7 @@ sub test_msg {
 	eval $code;
 	$warn =~ s/ at (?!.*\bat\b)[\w\W]*$//;
 	$die =~ s/ at (?!.*\bat\b)[\w\W]*$//;
-	
+
 	subtest $code => sub {
 		is( $warn, $warn_expected, "warn message is correct" ) or diag(
 			"code: $code\nwarn: $warn\n" );
@@ -48,8 +48,10 @@ foreach ( qw(fieldsort stable_fieldsort make_fieldsort make_stable_fieldsort) ) 
 	}
 
 foreach ( qw(fieldsort stable_fieldsort) ) {
+	local $^W = 1;  # This is definitely old school,
+	                # but this is part of the condition to trigger the message
 	test_msg qq{ scalar $_([1], qw(a b c)); }, "fieldsort called in scalar or void context", "";
-	}	
+	}
 
 ####################################################################
 # test that it all works
