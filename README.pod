@@ -8,7 +8,7 @@
 
 =for HTML <a href="https://github.com/briandfoy/sort-fields/actions?query=workflow%3Awindows"><img src="https://github.com/briandfoy/sort-fields/workflows/windows/badge.svg"></a>
 
-=for HTML <a href='https://ci.appveyor.com/project/briandfoy/data-constraint'><img src='https://ci.appveyor.com/api/projects/status/j9ce6dt5p2wbb5ps' /></a>
+=for HTML <a href='https://ci.appveyor.com/project/briandfoy/sort-fields'><img src='https://ci.appveyor.com/api/projects/status/l7vk7slf0npx3qj8?svg=true' /></a>
 
 =for HTML <a href='https://coveralls.io/github/briandfoy/sort-fields?branch=master'><img src='https://coveralls.io/repos/github/briandfoy/sort-fields/badge.svg?branch=master' alt='Coverage Status' /></a>
 
