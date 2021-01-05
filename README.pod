@@ -24,6 +24,10 @@ looking at this because you don't know where else to find what you're
 looking for. Read this once and you might never have to read one again
 for any Perl module.
 
+Joseph Hall wrote this module decades ago and it's basically on life
+support to make it fit in with modern packaging. The code is still
+what Joseph created, and no new development is intended.
+
 =head2 Documentation
 
 To read about L<Sort::Fields>, look at the embedded documentation
