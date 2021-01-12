@@ -62,3 +62,6 @@
 \.releaserc
 \.lwpcookies
 \.github
+\bMANIFEST\s\d
+\bChanges\s\d
+
