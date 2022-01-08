@@ -32,7 +32,7 @@ what Joseph created, and no new development is intended.
 
 To read about L<Sort::Fields>, look at the embedded documentation
 in the module itself. Inside the distribution, you can format it
-with L<perldoc|https://perldoc.perl.orgperldoc.html>:
+with L<perldoc|https://perldoc.perl.org/perldoc.html>:
 
 	% perldoc lib/Sort/Fields.pm
 
